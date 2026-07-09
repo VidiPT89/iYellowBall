@@ -51,6 +51,13 @@ final class GameScene: SKScene {
     let simHeight = CGFloat(GameConfig.rows) * CGFloat(GameConfig.cell)
     var renderScale: CGFloat = 1
 
+    /// The hosting view fills the whole screen (`.ignoresSafeArea()`), so the
+    /// scene has to inset itself manually to stay clear of the notch/Dynamic
+    /// Island and the home indicator — otherwise the HUD renders straight
+    /// under the sensor housing on notched devices.
+    var topSafeInset: CGFloat = 0
+    var bottomSafeInset: CGFloat = 0
+
     let mazeContainer = SKNode()
     var wallNodes: [SKShapeNode] = []
     var dotNodes: [Int: SKShapeNode] = [:]
@@ -131,8 +138,10 @@ final class GameScene: SKScene {
 
     func layout(size: CGSize) {
         guard size.width > 0, size.height > 0 else { return }
-        let hudHeight: CGFloat = 110
-        let controlsHeight: CGFloat = 190
+        topSafeInset = view?.safeAreaInsets.top ?? 0
+        bottomSafeInset = view?.safeAreaInsets.bottom ?? 0
+        let hudHeight: CGFloat = 110 + topSafeInset
+        let controlsHeight: CGFloat = 190 + bottomSafeInset
         let sideMargin: CGFloat = 16
         let availableW = size.width - sideMargin * 2
         let availableH = size.height - hudHeight - controlsHeight

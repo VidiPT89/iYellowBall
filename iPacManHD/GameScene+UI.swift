@@ -51,9 +51,9 @@ extension GameScene {
     }
 
     func layoutHUD(size: CGSize) {
-        let topBarY = size.height - 24
-        let statsY = size.height - 54
-        let livesY = size.height - 94
+        let topBarY = size.height - topSafeInset - 24
+        let statsY = size.height - topSafeInset - 54
+        let livesY = size.height - topSafeInset - 94
         hud.langButton.position = CGPoint(x: 26, y: topBarY)
         hud.langHit.position = hud.langButton.position
         hud.soundButton.position = CGPoint(x: 62, y: topBarY)
@@ -319,7 +319,7 @@ extension GameScene {
     func layoutControls(size: CGSize) {
         if dpadNodes.isEmpty { buildControls() }
         let cx = size.width / 2
-        let cy: CGFloat = 96
+        let cy: CGFloat = 96 + bottomSafeInset
         let gap: CGFloat = 52
         dpadNodes["up"]?.position = CGPoint(x: cx, y: cy + gap)
         dpadNodes["down"]?.position = CGPoint(x: cx, y: cy - gap)
@@ -374,9 +374,9 @@ extension GameScene {
         case "pause-tap": resumeGame()
         case "btn-replay": newGame(difficulty: difficulty)
         case "btn-close": hideGameOverOverlay()
-        case "diff-easy": newGame(difficulty: .easy)
-        case "diff-normal": newGame(difficulty: .normal)
-        case "diff-hard": newGame(difficulty: .hard)
+        case "diff-easy": newGame(difficulty: .easy); tryStart()
+        case "diff-normal": newGame(difficulty: .normal); tryStart()
+        case "diff-hard": newGame(difficulty: .hard); tryStart()
         case "open-website":
             if let url = URL(string: "https://ividi.dev/") { UIApplication.shared.open(url) }
         case "splash-tap": closeSplash()
