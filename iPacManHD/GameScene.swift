@@ -59,7 +59,6 @@ final class GameScene: SKScene {
     var bottomSafeInset: CGFloat = 0
 
     let mazeContainer = SKNode()
-    var wallNodes: [SKShapeNode] = []
     var dotNodes: [Int: SKShapeNode] = [:]
     var powerNodes: [Int: SKShapeNode] = [:]
     let particlesContainer = SKNode()
@@ -175,6 +174,14 @@ final class GameScene: SKScene {
     // MARK: Maze build
 
     func buildMaze() {
+        // Walls never change after this point, so they're built into a
+        // throwaway layer and baked into a single cached texture instead of
+        // staying as ~480 individual glowing SKShapeNodes: SpriteKit has to
+        // re-render every node's glow pass each frame regardless of whether
+        // it changed, and that many was enough to tank frame rate on older
+        // devices — the exact stutter already fixed for the web build in
+        // "Fix severe frame-rate stutter by caching the static maze layers".
+        let wallLayer = SKNode()
         for r in 0..<GameConfig.rows {
             for c in 0..<GameConfig.cols {
                 let v = GameConfig.maze[GameConfig.idx(c, r)]
@@ -187,8 +194,7 @@ final class GameScene: SKScene {
                     node.lineWidth = 1.3
                     node.glowWidth = 2.2
                     node.position = localPoint(x + GameConfig.cell / 2, y + GameConfig.cell / 2)
-                    mazeContainer.addChild(node)
-                    wallNodes.append(node)
+                    wallLayer.addChild(node)
                 } else if v == 0 {
                     let node = SKShapeNode(circleOfRadius: 2.1)
                     node.fillColor = SKColor(hex: "#ffe28a")
@@ -212,6 +218,17 @@ final class GameScene: SKScene {
                 }
             }
         }
+
+        mazeContainer.addChild(wallLayer)
+        let frame = wallLayer.calculateAccumulatedFrame()
+        if let view, frame.width > 0, frame.height > 0, let texture = view.texture(from: wallLayer) {
+            wallLayer.removeFromParent()
+            let sprite = SKSpriteNode(texture: texture)
+            sprite.position = CGPoint(x: frame.midX, y: frame.midY)
+            mazeContainer.addChild(sprite)
+        }
+        // If the view/texture snapshot isn't available yet, fall back to
+        // leaving the individual nodes in the tree rather than losing walls.
     }
 
     func buildEntityNodes() {

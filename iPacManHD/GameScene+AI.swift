@@ -213,6 +213,7 @@ extension GameScene {
     func respawnPositions() {
         pacman.resetToHome()
         heldDirs.removeAll()
+        activeTouchIds.removeAll()
         for g in ghosts {
             let delay = cfg.releaseDelays[GameConfig.ghostDefs.firstIndex { $0.name == g.name } ?? 0]
             g.resetToHome(releaseDelay: delay)
