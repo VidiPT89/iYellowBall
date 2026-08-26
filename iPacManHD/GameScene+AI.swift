@@ -1,6 +1,7 @@
 import SpriteKit
 
-private let allDirs = [Dir(x: 0, y: -1), Dir(x: 0, y: 1), Dir(x: -1, y: 0), Dir(x: 1, y: 0)]
+// Order matters for tie-breaks: matches the original arcade priority (up, left, down, right).
+private let allDirs = [Dir(x: 0, y: -1), Dir(x: -1, y: 0), Dir(x: 0, y: 1), Dir(x: 1, y: 0)]
 
 extension GameScene {
 
