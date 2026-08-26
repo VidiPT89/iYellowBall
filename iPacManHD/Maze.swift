@@ -20,6 +20,7 @@ enum Difficulty: String, CaseIterable {
 
 struct DifficultyConfig {
     let lives: Int
+    let pacSpeedMul: Double
     let ghostSpeedMul: Double
     let frightenedMs: Double
     let releaseDelays: [Double]
@@ -28,9 +29,9 @@ struct DifficultyConfig {
 
 enum GameConfig {
     static let difficulties: [Difficulty: DifficultyConfig] = [
-        .easy: DifficultyConfig(lives: 4, ghostSpeedMul: 0.82, frightenedMs: 9000, releaseDelays: [150, 2200, 6000, 10000], extraLifeScore: 8000),
-        .normal: DifficultyConfig(lives: 3, ghostSpeedMul: 0.94, frightenedMs: 7000, releaseDelays: [150, 2000, 5500, 9000], extraLifeScore: 10000),
-        .hard: DifficultyConfig(lives: 2, ghostSpeedMul: 1.08, frightenedMs: 5000, releaseDelays: [150, 1200, 3800, 6500], extraLifeScore: 12000),
+        .easy: DifficultyConfig(lives: 4, pacSpeedMul: 0.85, ghostSpeedMul: 0.72, frightenedMs: 9000, releaseDelays: [150, 2200, 6000, 10000], extraLifeScore: 8000),
+        .normal: DifficultyConfig(lives: 3, pacSpeedMul: 0.95, ghostSpeedMul: 0.85, frightenedMs: 7000, releaseDelays: [150, 2000, 5500, 9000], extraLifeScore: 10000),
+        .hard: DifficultyConfig(lives: 2, pacSpeedMul: 1.05, ghostSpeedMul: 0.98, frightenedMs: 5000, releaseDelays: [150, 1200, 3800, 6500], extraLifeScore: 12000),
     ]
 
     // 0 = dot, 1 = wall, 2 = ghost house, 3 = power pellet, 4 = empty path
@@ -99,8 +100,8 @@ enum GameConfig {
         Phase(mode: .chase, dur: 999_999),
     ]
 
-    static let basePacSpeed = 0.155 // sim units / ms
-    static let baseGhostSpeed = 0.135
+    static let basePacSpeed = 0.130 // sim units / ms
+    static let baseGhostSpeed = 0.120
     static let deathAnimMs = 900.0
     static let readyPauseMs = 650.0
 

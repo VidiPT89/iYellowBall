@@ -316,7 +316,7 @@ final class GameScene: SKScene {
             return
         }
 
-        stepEntity(pacman, speed: GameConfig.basePacSpeed, dt: dt, pickDir: { [weak self] e, c, r in
+        stepEntity(pacman, speed: GameConfig.basePacSpeed * cfg.pacSpeedMul, dt: dt, pickDir: { [weak self] e, c, r in
             self?.pickPacDir(e, c, r) ?? .zero
         }, onEnter: { [weak self] c, r in
             self?.handleDotConsumption(c, r)
