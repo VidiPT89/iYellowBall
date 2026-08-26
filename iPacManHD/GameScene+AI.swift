@@ -19,6 +19,18 @@ extension GameScene {
             return q
         }
         if (e.dir.x != 0 || e.dir.y != 0), !pacBlocked(col + e.dir.x, row + e.dir.y) { return e.dir }
+        // Pac-Man never idles once he is already moving: if the queued/current direction
+        // is blocked, keep walking along whichever other direction is open (a corridor
+        // bend), preferring not to reverse unless that is the only way out. Before the
+        // first move (dir is still zero) we still wait for the player's first input.
+        if e.dir.x != 0 || e.dir.y != 0 {
+            let reverse = e.dir.reversed
+            if let forward = allDirs.first(where: { !($0.x == reverse.x && $0.y == reverse.y) && !pacBlocked(col + $0.x, row + $0.y) }) {
+                pacman.lastDir = forward
+                return forward
+            }
+            if !pacBlocked(col + reverse.x, row + reverse.y) { return reverse }
+        }
         return .zero
     }
 
