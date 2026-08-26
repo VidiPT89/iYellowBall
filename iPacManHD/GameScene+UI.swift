@@ -186,7 +186,37 @@ extension GameScene {
         pauseSub.position = CGPoint(x: 0, y: -30)
         pause.addChild(pauseSub)
         pauseSubLabel = pauseSub
+
+        // Smaller buttons must be registered (and therefore hit-tested) before the
+        // full-screen "tap anywhere to resume" background, since touchesBegan picks
+        // the FIRST matching button by insertion order, not by visual z-order.
+        let resumeBg = SKShapeNode(rectOf: CGSize(width: 170, height: 44), cornerRadius: 10)
+        resumeBg.fillColor = SKColor(hex: "#ffd400")
+        resumeBg.strokeColor = .clear
+        pause.addChild(resumeBg)
+        let resumeLabel = SKLabelNode(fontNamed: "Menlo-Bold")
+        resumeLabel.fontSize = 15
+        resumeLabel.fontColor = .black
+        resumeLabel.verticalAlignmentMode = .center
+        resumeBg.addChild(resumeLabel)
+        pauseResumeLabel = resumeLabel
+        pauseResumeBg = resumeBg
+        buttons.append(UIButton(node: resumeBg, id: "btn-resume"))
+
+        let pauseMenuBg = SKShapeNode(rectOf: CGSize(width: 170, height: 40), cornerRadius: 10)
+        pauseMenuBg.fillColor = SKColor(white: 1, alpha: 0.06)
+        pauseMenuBg.strokeColor = SKColor(hex: "#4d78ff")
+        pause.addChild(pauseMenuBg)
+        let pauseMenuLabel = SKLabelNode(fontNamed: "Menlo-Bold")
+        pauseMenuLabel.fontSize = 14
+        pauseMenuLabel.fontColor = .white
+        pauseMenuLabel.verticalAlignmentMode = .center
+        pauseMenuBg.addChild(pauseMenuLabel)
+        pauseMenuLabelNode = pauseMenuLabel
+        pauseMenuBgNode = pauseMenuBg
+        buttons.append(UIButton(node: pauseMenuBg, id: "btn-menu-pause"))
         buttons.append(UIButton(node: pauseBg, id: "pause-tap"))
+
         pause.isHidden = true
         addChild(pause)
         pauseOverlay = pause
@@ -262,6 +292,8 @@ extension GameScene {
         }
         pauseTitleLabel?.position = center
         pauseSubLabel?.position = CGPoint(x: center.x, y: center.y - 30)
+        pauseResumeBg?.position = CGPoint(x: center.x, y: center.y - 70)
+        pauseMenuBgNode?.position = CGPoint(x: center.x, y: center.y - 122)
         gameOverTitleLabel?.position = CGPoint(x: center.x, y: center.y + 90)
         gameOverStatsLabel?.position = CGPoint(x: center.x, y: center.y + 20)
         gameOverReplayBg?.position = CGPoint(x: center.x, y: center.y - 50)
@@ -279,6 +311,8 @@ extension GameScene {
         if let h = diffButtons[.hard] { h.name.text = L.t("diffHard"); h.meta.text = L.t("diffHardMeta") }
         pauseTitleLabel?.text = L.t("pausedTitle")
         pauseSubLabel?.text = L.t("pausedSub")
+        pauseResumeLabel?.text = L.t("resumeBtn")
+        pauseMenuLabelNode?.text = L.t("menuBtn")
         gameOverReplayLabel?.text = L.t("playAgainBtn")
         gameOverCloseLabel?.text = L.t("closeBtn")
     }
@@ -337,7 +371,15 @@ extension GameScene {
 
     func releaseDir(_ id: AnyHashable) {
         heldDirs.removeAll { $0.id == id }
-        if let last = heldDirs.last { pacman.queuedDir = last.dir }
+        if let last = heldDirs.last {
+            pacman.queuedDir = last.dir
+        } else {
+            // No direction is held anymore: forget the queued turn instead of leaving it
+            // stuck pointing the way it last pointed. Otherwise a single tap-and-release
+            // keeps forcing Pac-Man to turn that way at every future intersection for the
+            // rest of the game, which can trap him circling the same small loop forever.
+            pacman.queuedDir = .zero
+        }
     }
 
     // MARK: Game flow helpers
@@ -372,6 +414,8 @@ extension GameScene {
         case "btn-pause": togglePause()
         case "start-tap": tryStart()
         case "pause-tap": resumeGame()
+        case "btn-resume": resumeGame()
+        case "btn-menu-pause": newGame(difficulty: difficulty)
         case "btn-replay": newGame(difficulty: difficulty)
         case "btn-close": hideGameOverOverlay()
         case "diff-easy": newGame(difficulty: .easy); tryStart()

@@ -84,6 +84,10 @@ final class GameScene: SKScene {
     var startHintLabel: SKLabelNode?
     var pauseTitleLabel: SKLabelNode?
     var pauseSubLabel: SKLabelNode?
+    var pauseResumeLabel: SKLabelNode?
+    var pauseResumeBg: SKShapeNode?
+    var pauseMenuLabelNode: SKLabelNode?
+    var pauseMenuBgNode: SKShapeNode?
     var gameOverTitleLabel: SKLabelNode?
     var gameOverStatsLabel: SKLabelNode?
     var gameOverReplayLabel: SKLabelNode?
