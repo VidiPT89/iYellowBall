@@ -4,8 +4,8 @@ enum ToneShape {
     case square, sawtooth
 }
 
-/// Tiny real-time synth that reproduces the original Web Audio `playTone`
-/// beeps: short square/sawtooth notes with an exponential decay envelope.
+/// Tiny real-time synth: short square/sawtooth notes with an exponential
+/// decay envelope. All sound effects are generated, no audio files.
 final class SoundEngine {
     static let shared = SoundEngine()
 
@@ -23,11 +23,11 @@ final class SoundEngine {
     private let lock = NSLock()
     private var sampleClock: Int64 = 0
     private(set) var isOn: Bool {
-        didSet { UserDefaults.standard.set(isOn, forKey: "pacmanhd.sound") }
+        didSet { UserDefaults.standard.set(isOn, forKey: "iyellowball.sound") }
     }
 
     private init() {
-        isOn = UserDefaults.standard.object(forKey: "pacmanhd.sound") == nil ? true : UserDefaults.standard.bool(forKey: "pacmanhd.sound")
+        isOn = UserDefaults.standard.object(forKey: "iyellowball.sound") == nil ? true : UserDefaults.standard.bool(forKey: "iyellowball.sound")
 
         let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1)!
         let source = AVAudioSourceNode { [weak self] _, _, frameCount, audioBufferList -> OSStatus in
@@ -97,16 +97,18 @@ final class SoundEngine {
         }
     }
 
-    func playChomp(alt: Bool) { playTone(freq: alt ? 240 : 200, duration: 0.045, gain: 0.16) }
-    func playPower() { playSequence([(330, 0, 0.09, .square, 0.18), (415, 60, 0.09, .square, 0.18), (523, 120, 0.14, .square, 0.18)]) }
-    func playEatGhost() { playSequence([(600, 0, 0.06, .square, 0.18), (900, 50, 0.06, .square, 0.18), (1300, 100, 0.1, .square, 0.18)]) }
-    func playDeath() {
-        playSequence([(300, 0, 0.14, .sawtooth, 0.18), (230, 140, 0.16, .sawtooth, 0.18), (170, 300, 0.2, .sawtooth, 0.18), (110, 480, 0.4, .sawtooth, 0.18)])
+    func playGem(alt: Bool) { playTone(freq: alt ? 1320 : 1175, duration: 0.035, gain: 0.08) }
+    func playFreeze() {
+        playSequence([(1568, 0, 0.08, .square, 0.12), (1319, 50, 0.08, .square, 0.12), (1047, 100, 0.08, .square, 0.12), (784, 150, 0.2, .square, 0.12)])
+    }
+    func playSmash() { playSequence([(180, 0, 0.08, .sawtooth, 0.2), (1400, 30, 0.05, .square, 0.12), (1800, 70, 0.07, .square, 0.12)]) }
+    func playPop() {
+        playSequence([(880, 0, 0.08, .square, 0.16), (440, 70, 0.1, .sawtooth, 0.18), (220, 160, 0.16, .sawtooth, 0.18), (110, 300, 0.3, .sawtooth, 0.18)])
     }
     func playLevelClear() {
-        playSequence([(523, 0, 0.15, .square, 0.18), (659, 110, 0.15, .square, 0.18), (784, 220, 0.15, .square, 0.18), (1047, 360, 0.3, .square, 0.18)])
+        playSequence([(587, 0, 0.12, .square, 0.16), (740, 90, 0.12, .square, 0.16), (880, 180, 0.12, .square, 0.16), (1175, 300, 0.12, .square, 0.16), (880, 400, 0.1, .square, 0.12), (1175, 480, 0.3, .square, 0.16)])
     }
     func playExtraLife() {
-        playSequence([(660, 0, 0.1, .square, 0.18), (880, 90, 0.1, .square, 0.18), (1100, 180, 0.18, .square, 0.18)])
+        playSequence([(784, 0, 0.1, .square, 0.16), (988, 80, 0.1, .square, 0.16), (1319, 160, 0.2, .square, 0.16)])
     }
 }

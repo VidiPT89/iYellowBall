@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct iPacManHDApp: App {
+struct iYellowBallApp: App {
     var body: some Scene {
         WindowGroup {
             GameView()

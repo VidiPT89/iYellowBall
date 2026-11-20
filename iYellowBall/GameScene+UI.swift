@@ -33,7 +33,7 @@ extension GameScene {
         hud.soundHit.fillColor = .clear
         hud.soundHit.strokeColor = .clear
         hud.pauseButton.fillColor = SKColor(white: 1, alpha: 0.08)
-        hud.pauseButton.strokeColor = SKColor(hex: "#4d78ff")
+        hud.pauseButton.strokeColor = SKColor(hex: "#3a4a7a")
         hud.pauseLabel.fontSize = 14
         hud.pauseLabel.fontColor = .white
         hud.pauseLabel.verticalAlignmentMode = .center
@@ -77,7 +77,7 @@ extension GameScene {
     func updateScoreLabel() { hud.scoreValue.text = "\(L.t("scoreLabel")): \(score)"; fitHUDLabels() }
     func updateLevelLabel() { hud.levelValue.text = "\(L.t("levelLabel")): \(level)" }
     func updateBestLabel() {
-        let best = UserDefaults.standard.integer(forKey: "pacmanhd.best.\(difficulty.rawValue)")
+        let best = UserDefaults.standard.integer(forKey: bestKey)
         hud.bestValue.text = "\(L.t("bestLabel")): \(best)"
         fitHUDLabels()
     }
@@ -85,9 +85,8 @@ extension GameScene {
         hud.livesTrack.removeAllChildren()
         for i in 0..<max(0, lives) {
             let dot = SKShapeNode(circleOfRadius: 6)
-            dot.fillColor = SKColor(hex: "#ffd400")
-            dot.strokeColor = SKColor(hex: "#ffd400")
-            dot.glowWidth = 2
+            dot.fillColor = SKColor(hex: "#ffd21f")
+            dot.strokeColor = SKColor(hex: "#ffb300")
             dot.position = CGPoint(x: CGFloat(i) * 18 - CGFloat(max(0, lives - 1)) * 9, y: 0)
             hud.livesTrack.addChild(dot)
         }
@@ -101,7 +100,7 @@ extension GameScene {
         let label = SKLabelNode(fontNamed: "Menlo-Bold")
         label.text = text
         label.fontSize = 16
-        label.fontColor = SKColor(hex: "#ffd400")
+        label.fontColor = SKColor(hex: "#ffd21f")
         label.position = CGPoint(x: size.width / 2, y: size.height - topSafeInset - 125)
         label.alpha = 0
         label.zPosition = 100
@@ -118,21 +117,20 @@ extension GameScene {
         start.zPosition = 50
         let startBg = SKShapeNode()
         startBg.name = "bg"
-        startBg.fillColor = SKColor(white: 0, alpha: 0.72)
+        startBg.fillColor = SKColor(white: 0, alpha: 0.8)
         startBg.strokeColor = .clear
         start.addChild(startBg)
         let title = SKLabelNode(fontNamed: "Menlo-Bold")
         title.fontSize = 30
-        title.fontColor = SKColor(hex: "#ffd400")
-        title.text = "PAC-MAN HD"
+        title.fontColor = SKColor(hex: "#ffd21f")
         start.addChild(title)
         startTitleLabel = title
 
         var diffButtons: [Difficulty: (bg: SKShapeNode, name: SKLabelNode, meta: SKLabelNode)] = [:]
         for diff in Difficulty.allCases {
             let bg = SKShapeNode(rectOf: CGSize(width: 150, height: 54), cornerRadius: 10)
-            bg.fillColor = SKColor(white: 1, alpha: 0.06)
-            bg.strokeColor = SKColor(hex: "#4d78ff")
+            bg.fillColor = SKColor(hex: "#12162a")
+            bg.strokeColor = SKColor(hex: "#3a4a7a")
             start.addChild(bg)
             let nameLabel = SKLabelNode(fontNamed: "Menlo-Bold")
             nameLabel.fontSize = 16
@@ -142,7 +140,7 @@ extension GameScene {
             bg.addChild(nameLabel)
             let metaLabel = SKLabelNode(fontNamed: "Menlo")
             metaLabel.fontSize = 12
-            metaLabel.fontColor = SKColor(hex: "#9fb3ff")
+            metaLabel.fontColor = SKColor(hex: "#a6b4d8")
             metaLabel.verticalAlignmentMode = .center
             metaLabel.position = CGPoint(x: 0, y: -12)
             bg.addChild(metaLabel)
@@ -150,6 +148,25 @@ extension GameScene {
             buttons.append(GameButton(node: bg, id: "diff-\(diff.rawValue)"))
         }
         self.diffButtons = diffButtons
+
+        let dailyBg = SKShapeNode(rectOf: CGSize(width: 190, height: 54), cornerRadius: 10)
+        dailyBg.fillColor = SKColor(hex: "#0f2a3a")
+        dailyBg.strokeColor = SKColor(hex: "#5cc8ff")
+        start.addChild(dailyBg)
+        let dailyName = SKLabelNode(fontNamed: "Menlo-Bold")
+        dailyName.fontSize = 16
+        dailyName.fontColor = .white
+        dailyName.verticalAlignmentMode = .center
+        dailyName.position = CGPoint(x: 0, y: 8)
+        dailyBg.addChild(dailyName)
+        let dailyMeta = SKLabelNode(fontNamed: "Menlo")
+        dailyMeta.fontSize = 12
+        dailyMeta.fontColor = SKColor(hex: "#bfefff")
+        dailyMeta.verticalAlignmentMode = .center
+        dailyMeta.position = CGPoint(x: 0, y: -12)
+        dailyBg.addChild(dailyMeta)
+        dailyButton = (dailyBg, dailyName, dailyMeta)
+        buttons.append(GameButton(node: dailyBg, id: "daily"))
 
         let hint = SKLabelNode(fontNamed: "Menlo-Bold")
         hint.fontSize = 14
@@ -160,7 +177,6 @@ extension GameScene {
         let credit = SKLabelNode(fontNamed: "Menlo")
         credit.fontSize = 12
         credit.fontColor = SKColor(white: 1, alpha: 0.55)
-        credit.text = "Developed by David Arsénio Martins"
         start.addChild(credit)
         creditLabel = credit
 
@@ -186,7 +202,7 @@ extension GameScene {
         pause.addChild(pauseBg)
         let pauseTitle = SKLabelNode(fontNamed: "Menlo-Bold")
         pauseTitle.fontSize = 28
-        pauseTitle.fontColor = SKColor(hex: "#ffd400")
+        pauseTitle.fontColor = SKColor(hex: "#ffd21f")
         pause.addChild(pauseTitle)
         pauseTitleLabel = pauseTitle
         let pauseSub = SKLabelNode(fontNamed: "Menlo")
@@ -200,7 +216,7 @@ extension GameScene {
         // full-screen "tap anywhere to resume" background, since touchesBegan picks
         // the FIRST matching button by insertion order, not by visual z-order.
         let resumeBg = SKShapeNode(rectOf: CGSize(width: 170, height: 44), cornerRadius: 10)
-        resumeBg.fillColor = SKColor(hex: "#ffd400")
+        resumeBg.fillColor = SKColor(hex: "#ffd21f")
         resumeBg.strokeColor = .clear
         pause.addChild(resumeBg)
         let resumeLabel = SKLabelNode(fontNamed: "Menlo-Bold")
@@ -213,8 +229,8 @@ extension GameScene {
         buttons.append(GameButton(node: resumeBg, id: "btn-resume"))
 
         let pauseMenuBg = SKShapeNode(rectOf: CGSize(width: 170, height: 40), cornerRadius: 10)
-        pauseMenuBg.fillColor = SKColor(white: 1, alpha: 0.06)
-        pauseMenuBg.strokeColor = SKColor(hex: "#4d78ff")
+        pauseMenuBg.fillColor = SKColor(hex: "#12162a")
+        pauseMenuBg.strokeColor = SKColor(hex: "#3a4a7a")
         pause.addChild(pauseMenuBg)
         let pauseMenuLabel = SKLabelNode(fontNamed: "Menlo-Bold")
         pauseMenuLabel.fontSize = 14
@@ -239,7 +255,7 @@ extension GameScene {
         over.addChild(overBg)
         let overTitle = SKLabelNode(fontNamed: "Menlo-Bold")
         overTitle.fontSize = 26
-        overTitle.fontColor = SKColor(hex: "#ff2e6c")
+        overTitle.fontColor = SKColor(hex: "#ff4d5e")
         overTitle.position = CGPoint(x: 0, y: 70)
         over.addChild(overTitle)
         gameOverTitleLabel = overTitle
@@ -252,7 +268,7 @@ extension GameScene {
         gameOverStatsLabel = statsLabel
 
         let replayBg = SKShapeNode(rectOf: CGSize(width: 170, height: 44), cornerRadius: 10)
-        replayBg.fillColor = SKColor(hex: "#ffd400")
+        replayBg.fillColor = SKColor(hex: "#ffd21f")
         replayBg.strokeColor = .clear
         replayBg.position = CGPoint(x: 0, y: -50)
         over.addChild(replayBg)
@@ -266,8 +282,8 @@ extension GameScene {
         buttons.append(GameButton(node: replayBg, id: "btn-replay"))
 
         let closeBg = SKShapeNode(rectOf: CGSize(width: 170, height: 40), cornerRadius: 10)
-        closeBg.fillColor = SKColor(white: 1, alpha: 0.06)
-        closeBg.strokeColor = SKColor(hex: "#4d78ff")
+        closeBg.fillColor = SKColor(hex: "#12162a")
+        closeBg.strokeColor = SKColor(hex: "#3a4a7a")
         closeBg.position = CGPoint(x: 0, y: -102)
         over.addChild(closeBg)
         let closeLabel = SKLabelNode(fontNamed: "Menlo-Bold")
@@ -291,14 +307,15 @@ extension GameScene {
             bg.path = CGPath(rect: full, transform: nil)
         }
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
-        startTitleLabel?.position = CGPoint(x: center.x, y: center.y + 130)
-        startHintLabel?.position = CGPoint(x: center.x, y: center.y - 160)
-        creditLabel?.position = CGPoint(x: center.x, y: center.y - 205)
-        creditLinkLabel?.position = CGPoint(x: center.x, y: center.y - 227)
+        startTitleLabel?.position = CGPoint(x: center.x, y: center.y + 150)
+        startHintLabel?.position = CGPoint(x: center.x, y: center.y - 196)
+        creditLabel?.position = CGPoint(x: center.x, y: center.y - 236)
+        creditLinkLabel?.position = CGPoint(x: center.x, y: center.y - 258)
         let order: [Difficulty] = [.easy, .normal, .hard]
         for (i, diff) in order.enumerated() {
-            diffButtons[diff]?.bg.position = CGPoint(x: center.x, y: center.y + 30 - CGFloat(i) * 62)
+            diffButtons[diff]?.bg.position = CGPoint(x: center.x, y: center.y + 70 - CGFloat(i) * 62)
         }
+        dailyButton?.bg.position = CGPoint(x: center.x, y: center.y - 126)
         pauseTitleLabel?.position = center
         pauseSubLabel?.position = CGPoint(x: center.x, y: center.y - 30)
         pauseResumeBg?.position = CGPoint(x: center.x, y: center.y - 70)
@@ -318,6 +335,10 @@ extension GameScene {
         if let e = diffButtons[.easy] { e.name.text = L.t("diffEasy"); e.meta.text = L.t("diffEasyMeta") }
         if let n = diffButtons[.normal] { n.name.text = L.t("diffNormal"); n.meta.text = L.t("diffNormalMeta") }
         if let h = diffButtons[.hard] { h.name.text = L.t("diffHard"); h.meta.text = L.t("diffHardMeta") }
+        dailyButton?.name.text = L.t("dailyBtn")
+        dailyButton?.meta.text = L.t("dailyMeta")
+        creditLabel?.text = L.t("credit")
+        if over, lastResult != nil { showGameOverOverlay() }
         pauseTitleLabel?.text = L.t("pausedTitle")
         pauseSubLabel?.text = L.t("pausedSub")
         pauseResumeLabel?.text = L.t("resumeBtn")
@@ -329,9 +350,10 @@ extension GameScene {
     func showStartOverlay() { startOverlay?.isHidden = false; pauseOverlay?.isHidden = true }
     func hideStartOverlayNode() { startOverlay?.isHidden = true }
 
-    func showGameOverOverlay(isNewBest: Bool, best: Int) {
+    func showGameOverOverlay() {
+        guard let result = lastResult else { return }
         gameOverTitleLabel?.text = L.t("loseTitle")
-        let bestText = isNewBest ? L.t("newBest") : "\(best)"
+        let bestText = result.isNewBest ? L.t("newBest") : "\(result.best)"
         gameOverStatsLabel?.text = "\(L.t("statScore")): \(score)    \(L.t("statLevel")): \(level)\n\(L.t("statBest")): \(bestText)"
         updateBestLabel()
         gameOverOverlay?.isHidden = false
@@ -345,7 +367,7 @@ extension GameScene {
         for (key, glyph) in names {
             let btn = SKShapeNode(circleOfRadius: 26)
             btn.fillColor = SKColor(white: 1, alpha: 0.08)
-            btn.strokeColor = SKColor(hex: "#4d78ff")
+            btn.strokeColor = SKColor(hex: "#3a4a7a")
             btn.name = "dpad-\(key)"
             let label = SKLabelNode(fontNamed: "Menlo-Bold")
             label.text = glyph
@@ -370,16 +392,16 @@ extension GameScene {
         dpadNodes["right"]?.position = CGPoint(x: cx + gap, y: cy)
     }
 
-    // MARK: Direction press tracking (mirrors heldDirs in script.js)
+    // MARK: Direction press tracking
 
     func pressDir(_ id: AnyHashable, _ dir: Dir) {
         guard !over, !transitioning, splashOverlay?.isHidden != false else { return }
-        pacman.turnBufferMs = 0
+        ball.turnBufferMs = 0
         if !heldDirs.contains(where: { $0.id == id }) { heldDirs.append((id: id, dir: dir)) }
-        pacman.queuedDir = dir
-        if dir != .zero && dir == pacman.dir.reversed {
-            pacman.dir = dir
-            pacman.lastDir = dir
+        ball.queuedDir = dir
+        if dir != .zero && dir == ball.dir.reversed {
+            ball.dir = dir
+            ball.lastDir = dir
         }
         tryStart()
     }
@@ -387,9 +409,9 @@ extension GameScene {
     func releaseDir(_ id: AnyHashable) {
         heldDirs.removeAll { $0.id == id }
         if let last = heldDirs.last {
-            pacman.queuedDir = last.dir
+            ball.queuedDir = last.dir
         } else {
-            pacman.turnBufferMs = 180
+            ball.turnBufferMs = 180
         }
     }
 
@@ -408,8 +430,9 @@ extension GameScene {
         guard running, !over else { return }
         heldDirs.removeAll()
         activeTouchIds.removeAll()
-        pacman.queuedDir = .zero
-        pacman.turnBufferMs = 0
+        swipeStarts.removeAll()
+        ball.queuedDir = .zero
+        ball.turnBufferMs = 0
         gamePaused = true
         pauseOverlay?.isHidden = false
     }
@@ -430,12 +453,12 @@ extension GameScene {
         case "start-tap": tryStart()
         case "pause-tap": resumeGame()
         case "btn-resume": resumeGame()
-        case "btn-menu-pause": newGame(difficulty: difficulty)
-        case "btn-replay": newGame(difficulty: difficulty)
-        case "btn-close": newGame(difficulty: difficulty)
+        case "btn-menu-pause", "btn-close": newGame(difficulty: difficulty)
+        case "btn-replay": newGame(difficulty: difficulty, mode: mode); tryStart()
         case "diff-easy": newGame(difficulty: .easy); tryStart()
         case "diff-normal": newGame(difficulty: .normal); tryStart()
         case "diff-hard": newGame(difficulty: .hard); tryStart()
+        case "daily": newGame(difficulty: .normal, mode: Self.dailyMode()); tryStart()
         case "open-website":
             if let url = URL(string: "https://ividi.dev/") { UIApplication.shared.open(url) }
         case "splash-tap": closeSplash()
@@ -479,7 +502,11 @@ extension GameScene {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
-            guard let hit = button(at: touch.location(in: self)) else { continue }
+            guard let hit = button(at: touch.location(in: self)) else {
+                // Anywhere else during play: swipe to steer, like a held D-pad direction.
+                if running, !gamePaused, !over { swipeStarts[ObjectIdentifier(touch)] = touch.location(in: self) }
+                continue
+            }
             if hit.id.hasPrefix("dpad-"), let dir = Self.dirKeys[String(hit.id.dropFirst(5))] {
                 let id = ObjectIdentifier(touch)
                 activeTouchIds[id] = id
@@ -493,6 +520,19 @@ extension GameScene {
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
             let id = ObjectIdentifier(touch)
+            if let start = swipeStarts[id] {
+                let p = touch.location(in: self)
+                let dx = p.x - start.x, dy = p.y - start.y
+                guard max(abs(dx), abs(dy)) >= 14 else { continue }
+                // Screen y is up; grid y is down.
+                let dir = abs(dx) > abs(dy) ? Dir(x: dx > 0 ? 1 : -1, y: 0) : Dir(x: 0, y: dy > 0 ? -1 : 1)
+                swipeStarts[id] = p
+                if heldDirs.first(where: { $0.id == AnyHashable(id) })?.dir == dir { continue }
+                heldDirs.removeAll { $0.id == AnyHashable(id) }
+                activeTouchIds[id] = id
+                pressDir(id, dir)
+                continue
+            }
             guard activeTouchIds[id] != nil,
                   let hit = button(at: touch.location(in: self)), hit.id.hasPrefix("dpad-"),
                   let dir = Self.dirKeys[String(hit.id.dropFirst(5))],
@@ -504,6 +544,7 @@ extension GameScene {
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
+            swipeStarts.removeValue(forKey: ObjectIdentifier(touch))
             if let id = activeTouchIds.removeValue(forKey: ObjectIdentifier(touch)) {
                 releaseDir(id)
             }
@@ -523,7 +564,7 @@ extension GameScene {
             return
         }
         if over {
-            if key == " " || key == "Escape" { newGame(difficulty: difficulty) }
+            if key == " " || key == "Escape" { newGame(difficulty: difficulty, mode: mode) }
             return
         }
         if let dir = Self.keyToDir(key), !isRepeat {

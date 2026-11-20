@@ -1,18 +1,22 @@
-name: iPacManHD
+name: iYellowBall
 options:
-  bundleIdPrefix: com.vidi
+  bundleIdPrefix: dev.ividi
   deploymentTarget:
     iOS: "16.0"
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
 configs:
   Debug: debug
   Release: release
 targets:
-  iPacManHD:
+  iYellowBall:
     type: application
     platform: iOS
     deploymentTarget: "16.0"
     sources:
-      - path: iPacManHD
+      - path: iYellowBall
     info:
       path: Generated/Info.plist
       properties:
@@ -23,12 +27,21 @@ targets:
           - UIInterfaceOrientationPortrait
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleDisplayName: "Pac-Man HD"
+        CFBundleDisplayName: iYellowBall
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.arcade-games
+        NSHumanReadableCopyright: Copyright © David Arsénio Martins
+        # No cryptography beyond what the system does: no export paperwork.
+        ITSAppUsesNonExemptEncryption: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.vidi.iPacManHD
+        PRODUCT_BUNDLE_IDENTIFIER: dev.ividi.iyellowball
+        PRODUCT_NAME: iYellowBall
+        DEVELOPMENT_TEAM: S769436W24
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

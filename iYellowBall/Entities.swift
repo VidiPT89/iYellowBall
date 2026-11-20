@@ -8,27 +8,28 @@ protocol GridEntity: AnyObject {
     var dir: Dir { get set }
 }
 
-final class PacMan: GridEntity {
+final class Ball: GridEntity {
     var col: Int
     var row: Int
     var x: Double
     var y: Double
     var dir: Dir = .zero
     var queuedDir: Dir = .zero
-    var lastDir: Dir = Dir(x: -1, y: 0)
+    var lastDir = Dir(x: -1, y: 0)
     var turnBufferMs: Double = 0
-    var mouthPhase: Double = 0
+    /// Accumulated roll angle, drives the spinning shine.
+    var roll: Double = 0
 
-    init() {
-        col = GameConfig.pacHome.col
-        row = GameConfig.pacHome.row
+    init(home: GridPoint) {
+        col = home.col
+        row = home.row
         x = Double(col) * GameConfig.cell
         y = Double(row) * GameConfig.cell
     }
 
-    func resetToHome() {
-        col = GameConfig.pacHome.col
-        row = GameConfig.pacHome.row
+    func reset(to home: GridPoint) {
+        col = home.col
+        row = home.row
         x = Double(col) * GameConfig.cell
         y = Double(row) * GameConfig.cell
         dir = .zero
@@ -37,50 +38,57 @@ final class PacMan: GridEntity {
     }
 }
 
-enum GhostState {
-    case house, leaving, scatter, chase, frightened, eaten
+enum EnemyState {
+    /// Waiting in the plaza for its release timer.
+    case dormant
+    case roaming
+    /// Shattered by the ball; rebuilds itself in the plaza.
+    case reforming
 }
 
-final class Ghost: GridEntity {
-    let name: String
-    let home: GridPoint
-    let scatter: GridPoint
+final class Enemy: GridEntity {
+    let kind: EnemyKind
+    let spawn: GridPoint
 
     var col: Int
     var row: Int
     var x: Double
     var y: Double
     var dir: Dir = .zero
-    var state: GhostState = .house
-    var houseTimer: Double = 0
+    var state: EnemyState = .dormant
+    var frozen = false
+    var timer: Double = 0
     var releaseDelay: Double
-    var bouncePhase: Double = Double.random(in: 0...(2 * Double.pi))
+    var wobble: Double = Double.random(in: 0...(2 * Double.pi))
 
-    init(def: GameConfig.GhostDef, releaseDelay: Double) {
-        name = def.name
-        home = def.home
-        scatter = def.scatter
-        col = def.home.col
-        row = def.home.row
+    init(def: GameConfig.EnemyDef, releaseDelay: Double) {
+        kind = def.kind
+        spawn = def.spawn
+        col = spawn.col
+        row = spawn.row
         x = Double(col) * GameConfig.cell
         y = Double(row) * GameConfig.cell
         self.releaseDelay = releaseDelay
     }
 
-    func resetToHome(releaseDelay: Double) {
-        col = home.col
-        row = home.row
+    func reset(releaseDelay: Double) {
+        col = spawn.col
+        row = spawn.row
         x = Double(col) * GameConfig.cell
         y = Double(row) * GameConfig.cell
         dir = .zero
-        state = .house
-        houseTimer = 0
+        state = .dormant
+        frozen = false
+        timer = 0
         self.releaseDelay = releaseDelay
     }
+
+    /// Dangerous to touch: anything visible and not frozen.
+    var isHarmful: Bool { state != .reforming && !frozen }
 }
 
-/// Direct port of the JS `stepEntity`: slides an entity through the grid,
-/// re-picking a direction whenever it lands exactly on a cell center.
+/// Slides an entity through the grid, re-picking a direction whenever it
+/// lands exactly on a tile centre. Wraps horizontally through the tunnel.
 func stepEntity<T: GridEntity>(_ e: T, speed: Double, dt: Double, pickDir: (T, Int, Int) -> Dir, onEnter: ((Int, Int) -> Void)? = nil) {
     var remainingDist = speed * dt
     var guardCount = 0
@@ -101,16 +109,11 @@ func stepEntity<T: GridEntity>(_ e: T, speed: Double, dt: Double, pickDir: (T, I
             onEnter?(c, r)
             e.dir = pickDir(e, c, r)
         }
-        if e.dir.x == 0 && e.dir.y == 0 { remainingDist = 0; break }
+        if e.dir.isZero { break }
         let axisDir = e.dir.x != 0 ? e.dir.x : e.dir.y
         let axisPos = e.dir.x != 0 ? e.x : e.y
         let modPos = (axisPos.truncatingRemainder(dividingBy: cell) + cell).truncatingRemainder(dividingBy: cell)
-        let distToBoundary: Double
-        if modPos < 0.05 {
-            distToBoundary = cell
-        } else {
-            distToBoundary = axisDir > 0 ? cell - modPos : modPos
-        }
+        let distToBoundary = modPos < 0.05 ? cell : (axisDir > 0 ? cell - modPos : modPos)
         let move = min(remainingDist, distToBoundary)
         e.x += Double(e.dir.x) * move
         e.y += Double(e.dir.y) * move
