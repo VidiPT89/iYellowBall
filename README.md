@@ -4,6 +4,8 @@
 
 iYellowBall is a native iPhone/iPad arcade game built with **Swift** and **SpriteKit**, no third-party engines or dependencies. Every maze is generated on the device from a seed, so each level is a new layout, and the **Daily maze** is the same for every player on the same day.
 
+🌐 Web version (same mazes, same daily seed): [play in the browser](https://vidipt89.github.io/iYellowBallWeb/) · [source](https://github.com/VidiPT89/iYellowBallWeb)
+
 ## 📦 What's Inside
 
 - 🧩 **Generated mazes:** a symmetric maze carved for each level, with every dead end opened into a loop so there is always a way out, a central plaza and a side tunnel that wraps across the board
