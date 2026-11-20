@@ -1,12 +1,12 @@
 # 🟡 Pac-Man HD — Run, Chase, Eat It All (iOS)
 
-> A native iOS remake of the 1980 arcade classic, built with Swift and SpriteKit — a glowing neon maze, four ghosts with real personalities, and a chase that never lets up.
+> A native iOS remake of the 1980 arcade classic, built with Swift and SpriteKit — a crisp blue arcade maze, four ghosts with real personalities, and a chase that never lets up.
 
-Pac-Man HD is a native iPhone/iPad game built with **Swift** and **SpriteKit** — no third-party engines, no external dependencies. Guide Pac-Man through a 28×28 neon-glowing maze, gobble every dot and power pellet, and outrun four ghosts before they corner you. Each ghost hunts differently — Blinky chases directly, Pinky ambushes ahead of you, Inky flanks unpredictably, and Clyde loses interest up close — and a power pellet flips the hunt for a few precious seconds, turning every ghost into prey.
+Pac-Man HD is a native iPhone/iPad game built with **Swift** and **SpriteKit** — no third-party engines, no external dependencies. Guide Pac-Man through a 28×28 blue-outlined maze, gobble every dot and power pellet, and outrun four ghosts before they corner you. Each ghost hunts differently — Blinky chases directly, Pinky ambushes ahead of you, Inky flanks unpredictably, and Clyde loses interest up close — and a power pellet flips the hunt for a few precious seconds, turning every ghost into prey.
 
 ## 📦 What's Inside
 
-- 🧩 A full 28×28 classic-style maze rendered with SpriteKit nodes, glowing walls, pulsing pac-dots and animated power pellets
+- 🧩 A full 28×28 classic-style maze rendered with SpriteKit nodes, continuous blue wall outlines, pulsing pac-dots and animated power pellets
 - 🟡 Smooth, continuously-animated Pac-Man movement (not grid-snapped) with a rotating, chomping mouth that follows the travel direction
 - 👻 Four ghosts — Blinky, Pinky, Inky, Clyde — each with authentic chase logic (direct pursuit, ambush, flank, and distance-based shyness) plus scatter/chase phases that alternate over time
 - 😱 Power pellets trigger a frightened state — ghosts turn blue and flee, with an escalating 200 → 400 → 800 → 1600 combo for eating them in a row, plus floating score popups
@@ -21,7 +21,7 @@ Pac-Man HD is a native iPhone/iPad game built with **Swift** and **SpriteKit** �
 - ⌨️ 📱 On-screen D-pad plus full hardware keyboard support (arrows/WASD, Space, P) for Simulator and keyboard-connected iPads
 - ⏸️ Pause/resume at any time, with a dimmed overlay and its own translated hint text
 - 🎬 An animated intro presentation on launch — Pac-Man chomps across the title screen before handing off to the main menu
-- 🌌 Animated ambient starfield behind the maze, independent of the game state
+- 🌌 Quiet black arcade backdrop that keeps the maze readable
 - 🖥️ Neon glow styling throughout for an authentic arcade-cabinet feel
 
 ## 🛠️ Tech Stack
@@ -116,3 +116,27 @@ xcodegen generate
 
 Developed by **David Arsénio Martins**
 🌐 [ividi.dev](https://ividi.dev/)
+
+
+## Arcade refinement (2026-11-20)
+
+- Connected blue wall outlines, pink ghost-house door and restrained character glow.
+- Readable frightened faces, including contrasting eyes and mouth during the warning flash.
+- Immediate direction reversal between tiles; existing corner controls preserved.
+- Ghosts slow in the side tunnel; collisions work across its wraparound seam.
+- Frightened mode suspends the chase/scatter clock and applies to ghosts leaving the house.
+- Level/death transitions use simulation time: pausing freezes them and restarting cancels them.
+- Losing focus pauses the game and clears held controls.
+- Original maze, four ghost personalities, difficulty presets and scoring retained.
+
+Launch a Debug build with `--smoke-test` to run 19 scene regressions and display a paused playfield for visual inspection. The checks use the actual SpriteKit scene; the flag is excluded from Release builds.
+
+
+## General review (2026-11-20)
+
+- Short tap buffering, finger sliding between direction buttons and independent multi-touch identities.
+- Modal hit-testing blocks underlying controls; closing game over returns to the menu.
+- HUD labels fit their allotted width and the scene follows view resizing.
+- Audio attempts to recover after its engine stops, and muting clears pending notes.
+- Removed the unused particle/starfield/camera-shake systems, unused state and unused translations.
+- Debug smoke checks cover movement, death, combos, overlays and iPhone/iPad layout sizes. Release excludes these checks.

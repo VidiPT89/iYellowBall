@@ -5,7 +5,7 @@ import UIKit
 
 /// A tappable region tracked outside the node tree's hit-testing so touch
 /// handling can stay a simple linear scan instead of juggling SKNode names.
-struct UIButton {
+struct GameButton {
     let node: SKNode
     let id: String
 }
@@ -44,10 +44,10 @@ extension GameScene {
         }
         addChild(hud.container)
 
-        buttons.append(UIButton(node: hud.langHit, id: "btn-lang"))
-        buttons.append(UIButton(node: hud.soundHit, id: "btn-sound"))
-        buttons.append(UIButton(node: hud.pauseButton, id: "btn-pause"))
-        buttons.append(UIButton(node: hud.pauseLabel, id: "btn-pause"))
+        buttons.append(GameButton(node: hud.langHit, id: "btn-lang"))
+        buttons.append(GameButton(node: hud.soundHit, id: "btn-sound"))
+        buttons.append(GameButton(node: hud.pauseButton, id: "btn-pause"))
+        buttons.append(GameButton(node: hud.pauseLabel, id: "btn-pause"))
     }
 
     func layoutHUD(size: CGSize) {
@@ -64,13 +64,22 @@ extension GameScene {
         hud.levelValue.position = CGPoint(x: size.width * 0.5, y: statsY)
         hud.bestValue.position = CGPoint(x: size.width * 0.8, y: statsY)
         hud.livesTrack.position = CGPoint(x: size.width / 2, y: livesY)
+        fitHUDLabels()
     }
 
-    func updateScoreLabel() { hud.scoreValue.text = "\(L.t("scoreLabel")): \(score)" }
+    func fitHUDLabels() {
+        for label in [hud.scoreValue, hud.levelValue, hud.bestValue] {
+            label.setScale(1)
+            label.setScale(min(1, max(1, size.width * 0.3 - 8) / max(1, label.frame.width)))
+        }
+    }
+
+    func updateScoreLabel() { hud.scoreValue.text = "\(L.t("scoreLabel")): \(score)"; fitHUDLabels() }
     func updateLevelLabel() { hud.levelValue.text = "\(L.t("levelLabel")): \(level)" }
     func updateBestLabel() {
         let best = UserDefaults.standard.integer(forKey: "pacmanhd.best.\(difficulty.rawValue)")
         hud.bestValue.text = "\(L.t("bestLabel")): \(best)"
+        fitHUDLabels()
     }
     func updateLivesHUD() {
         hud.livesTrack.removeAllChildren()
@@ -93,7 +102,7 @@ extension GameScene {
         label.text = text
         label.fontSize = 16
         label.fontColor = SKColor(hex: "#ffd400")
-        label.position = CGPoint(x: size.width / 2, y: size.height - 130)
+        label.position = CGPoint(x: size.width / 2, y: size.height - topSafeInset - 125)
         label.alpha = 0
         label.zPosition = 100
         addChild(label)
@@ -138,7 +147,7 @@ extension GameScene {
             metaLabel.position = CGPoint(x: 0, y: -12)
             bg.addChild(metaLabel)
             diffButtons[diff] = (bg, nameLabel, metaLabel)
-            buttons.append(UIButton(node: bg, id: "diff-\(diff.rawValue)"))
+            buttons.append(GameButton(node: bg, id: "diff-\(diff.rawValue)"))
         }
         self.diffButtons = diffButtons
 
@@ -161,8 +170,8 @@ extension GameScene {
         creditLink.text = "ividi.dev"
         start.addChild(creditLink)
         creditLinkLabel = creditLink
-        buttons.append(UIButton(node: creditLink, id: "open-website"))
-        buttons.append(UIButton(node: startBg, id: "start-tap"))
+        buttons.append(GameButton(node: creditLink, id: "open-website"))
+        buttons.append(GameButton(node: startBg, id: "start-tap"))
 
         start.isHidden = true
         addChild(start)
@@ -201,7 +210,7 @@ extension GameScene {
         resumeBg.addChild(resumeLabel)
         pauseResumeLabel = resumeLabel
         pauseResumeBg = resumeBg
-        buttons.append(UIButton(node: resumeBg, id: "btn-resume"))
+        buttons.append(GameButton(node: resumeBg, id: "btn-resume"))
 
         let pauseMenuBg = SKShapeNode(rectOf: CGSize(width: 170, height: 40), cornerRadius: 10)
         pauseMenuBg.fillColor = SKColor(white: 1, alpha: 0.06)
@@ -214,8 +223,8 @@ extension GameScene {
         pauseMenuBg.addChild(pauseMenuLabel)
         pauseMenuLabelNode = pauseMenuLabel
         pauseMenuBgNode = pauseMenuBg
-        buttons.append(UIButton(node: pauseMenuBg, id: "btn-menu-pause"))
-        buttons.append(UIButton(node: pauseBg, id: "pause-tap"))
+        buttons.append(GameButton(node: pauseMenuBg, id: "btn-menu-pause"))
+        buttons.append(GameButton(node: pauseBg, id: "pause-tap"))
 
         pause.isHidden = true
         addChild(pause)
@@ -254,7 +263,7 @@ extension GameScene {
         replayBg.addChild(replayLabel)
         gameOverReplayLabel = replayLabel
         gameOverReplayBg = replayBg
-        buttons.append(UIButton(node: replayBg, id: "btn-replay"))
+        buttons.append(GameButton(node: replayBg, id: "btn-replay"))
 
         let closeBg = SKShapeNode(rectOf: CGSize(width: 170, height: 40), cornerRadius: 10)
         closeBg.fillColor = SKColor(white: 1, alpha: 0.06)
@@ -268,7 +277,7 @@ extension GameScene {
         closeBg.addChild(closeLabel)
         gameOverCloseLabel = closeLabel
         gameOverCloseBg = closeBg
-        buttons.append(UIButton(node: closeBg, id: "btn-close"))
+        buttons.append(GameButton(node: closeBg, id: "btn-close"))
 
         over.isHidden = true
         addChild(over)
@@ -346,7 +355,7 @@ extension GameScene {
             btn.addChild(label)
             addChild(btn)
             dpadNodes[key] = btn
-            buttons.append(UIButton(node: btn, id: "dpad-\(key)"))
+            buttons.append(GameButton(node: btn, id: "dpad-\(key)"))
         }
     }
 
@@ -364,8 +373,14 @@ extension GameScene {
     // MARK: Direction press tracking (mirrors heldDirs in script.js)
 
     func pressDir(_ id: AnyHashable, _ dir: Dir) {
+        guard !over, !transitioning, splashOverlay?.isHidden != false else { return }
+        pacman.turnBufferMs = 0
         if !heldDirs.contains(where: { $0.id == id }) { heldDirs.append((id: id, dir: dir)) }
         pacman.queuedDir = dir
+        if dir != .zero && dir == pacman.dir.reversed {
+            pacman.dir = dir
+            pacman.lastDir = dir
+        }
         tryStart()
     }
 
@@ -374,18 +389,14 @@ extension GameScene {
         if let last = heldDirs.last {
             pacman.queuedDir = last.dir
         } else {
-            // No direction is held anymore: forget the queued turn instead of leaving it
-            // stuck pointing the way it last pointed. Otherwise a single tap-and-release
-            // keeps forcing Pac-Man to turn that way at every future intersection for the
-            // rest of the game, which can trap him circling the same small loop forever.
-            pacman.queuedDir = .zero
+            pacman.turnBufferMs = 180
         }
     }
 
     // MARK: Game flow helpers
 
     func tryStart() {
-        if over { return }
+        if over || splashOverlay?.isHidden == false { return }
         if !running {
             running = true
             hideStartOverlayNode()
@@ -395,6 +406,10 @@ extension GameScene {
     }
     func pauseGame() {
         guard running, !over else { return }
+        heldDirs.removeAll()
+        activeTouchIds.removeAll()
+        pacman.queuedDir = .zero
+        pacman.turnBufferMs = 0
         gamePaused = true
         pauseOverlay?.isHidden = false
     }
@@ -417,7 +432,7 @@ extension GameScene {
         case "btn-resume": resumeGame()
         case "btn-menu-pause": newGame(difficulty: difficulty)
         case "btn-replay": newGame(difficulty: difficulty)
-        case "btn-close": hideGameOverOverlay()
+        case "btn-close": newGame(difficulty: difficulty)
         case "diff-easy": newGame(difficulty: .easy); tryStart()
         case "diff-normal": newGame(difficulty: .normal); tryStart()
         case "diff-hard": newGame(difficulty: .hard); tryStart()
@@ -441,22 +456,49 @@ extension GameScene {
     func isEffectivelyVisible(_ node: SKNode) -> Bool {
         var n: SKNode? = node
         while let cur = n {
-            if cur.isHidden { return false }
+            if cur.isHidden || cur.alpha <= 0.01 { return false }
             n = cur.parent
         }
         return true
     }
 
+    func button(at location: CGPoint) -> GameButton? {
+        let overlay = [splashOverlay, gameOverOverlay, pauseOverlay, startOverlay]
+            .compactMap { $0 }.first { !$0.isHidden }
+        return buttons.first { button in
+            guard isEffectivelyVisible(button.node) else { return false }
+            if let overlay {
+                var ancestor: SKNode? = button.node
+                while ancestor != nil && ancestor !== overlay { ancestor = ancestor?.parent }
+                if ancestor == nil { return false }
+            }
+            guard let parent = button.node.parent else { return false }
+            return button.node.calculateAccumulatedFrame().contains(parent.convert(location, from: self))
+        }
+    }
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
-            let loc = touch.location(in: self)
-            guard let hit = buttons.first(where: { isEffectivelyVisible($0.node) && $0.node.calculateAccumulatedFrame().contains(loc) }) else { continue }
-            if hit.id.hasPrefix("dpad-"), let key = Self.dirKeys[String(hit.id.dropFirst(5))] {
-                activeTouchIds[ObjectIdentifier(touch)] = hit.id
-                pressDir(hit.id, key)
+            guard let hit = button(at: touch.location(in: self)) else { continue }
+            if hit.id.hasPrefix("dpad-"), let dir = Self.dirKeys[String(hit.id.dropFirst(5))] {
+                let id = ObjectIdentifier(touch)
+                activeTouchIds[id] = id
+                pressDir(id, dir)
             } else {
                 handleButtonTap(hit.id)
             }
+        }
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            let id = ObjectIdentifier(touch)
+            guard activeTouchIds[id] != nil,
+                  let hit = button(at: touch.location(in: self)), hit.id.hasPrefix("dpad-"),
+                  let dir = Self.dirKeys[String(hit.id.dropFirst(5))],
+                  heldDirs.first(where: { $0.id == AnyHashable(id) })?.dir != dir else { continue }
+            heldDirs.removeAll { $0.id == AnyHashable(id) }
+            pressDir(id, dir)
         }
     }
 
@@ -475,6 +517,15 @@ extension GameScene {
     // MARK: Keyboard handling (see GameSKView for the UIPress forwarding)
 
     func handleKeyDown(_ key: String, isRepeat: Bool) {
+        guard !isRepeat, !heldDirs.contains(where: { $0.id == AnyHashable(key) }) else { return }
+        if splashOverlay?.isHidden == false {
+            if key == " " || key == "Escape" { closeSplash() }
+            return
+        }
+        if over {
+            if key == " " || key == "Escape" { newGame(difficulty: difficulty) }
+            return
+        }
         if let dir = Self.keyToDir(key), !isRepeat {
             pressDir(key, dir)
         } else if key == " " {

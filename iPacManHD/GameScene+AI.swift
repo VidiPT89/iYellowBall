@@ -16,6 +16,7 @@ extension GameScene {
         let q = pacman.queuedDir
         if (q.x != 0 || q.y != 0), !pacBlocked(col + q.x, row + q.y) {
             pacman.lastDir = q
+            if heldDirs.isEmpty { pacman.queuedDir = .zero; pacman.turnBufferMs = 0 }
             return q
         }
         if (e.dir.x != 0 || e.dir.y != 0), !pacBlocked(col + e.dir.x, row + e.dir.y) { return e.dir }
@@ -114,6 +115,7 @@ extension GameScene {
         var mul = cfg.ghostSpeedMul * (1 + levelBonus)
         if ghost.state == .frightened { mul *= 0.55 }
         else if ghost.state == .eaten { mul *= 1.9 }
+        if ghost.row == 13 && (ghost.x < 5 * GameConfig.cell || ghost.x > 22 * GameConfig.cell) && ghost.state != .eaten { mul *= 0.65 }
         return GameConfig.baseGhostSpeed * mul
     }
 
@@ -136,7 +138,7 @@ extension GameScene {
         }, onEnter: { [weak self] c, r in
             guard let self else { return }
             if ghost.state == .leaving && r <= 10 {
-                ghost.state = self.currentPhaseMode()
+                ghost.state = self.frightenedTimer > 0 ? .frightened : self.currentPhaseMode()
             }
             if ghost.state == .eaten && r >= 12 && r <= 13 && c >= 11 && c <= 16 {
                 ghost.state = .house
@@ -215,8 +217,7 @@ extension GameScene {
         pacman.queuedDir = .zero
         SoundEngine.shared.playDeath()
         Haptics.error()
-        spawnExplosion(x: pacman.x + GameConfig.cell / 2, y: pacman.y + GameConfig.cell / 2, color: SKColor(hex: "#ffd400"))
-        shakeCamera()
+
     }
 
     func finishDeathSequence() {
@@ -230,13 +231,15 @@ extension GameScene {
         }
         respawnPositions()
         showToast(L.t("lifeLostToast"))
-        run(.wait(forDuration: GameConfig.readyPauseMs / 1000)) { [weak self] in
+        scheduleTransition(GameConfig.readyPauseMs) { [weak self] in
             self?.transitioning = false
             self?.invulnerableTimer = 1600
         }
     }
 
     func respawnPositions() {
+        phaseIndex = 0
+        phaseTimer = 0
         pacman.resetToHome()
         heldDirs.removeAll()
         activeTouchIds.removeAll()
@@ -252,7 +255,7 @@ extension GameScene {
         showToast(L.levelClear(level))
         SoundEngine.shared.playLevelClear()
         Haptics.success()
-        run(.wait(forDuration: 1.6)) { [weak self] in
+        scheduleTransition(1600) { [weak self] in
             guard let self else { return }
             self.level += 1
             self.updateLevelLabel()
@@ -279,6 +282,7 @@ extension GameScene {
     // MARK: Phase / frightened timers
 
     func updatePhase(_ dt: Double) {
+        guard frightenedTimer <= 0 else { return }
         phaseTimer += dt
         let phase = GameConfig.phases[phaseIndex]
         if phaseTimer >= phase.dur && phaseIndex < GameConfig.phases.count - 1 {
@@ -306,7 +310,8 @@ extension GameScene {
     func checkGhostCollisions() {
         for g in ghosts {
             if g.state == .house { continue }
-            let dist = hypot(g.x - pacman.x, g.y - pacman.y)
+            let dx = abs(g.x - pacman.x)
+            let dist = hypot(min(dx, Double(simWidth) - dx), g.y - pacman.y)
             if dist < GameConfig.cell * 0.55 {
                 if g.state == .frightened {
                     eatGhost(g)
@@ -322,6 +327,15 @@ extension GameScene {
     // MARK: New game
 
     func newGame(difficulty: Difficulty) {
+        toastNode?.removeFromParent()
+        toastNode = nil
+        transitionAction = nil
+        transitionRemaining = 0
+        dying = false
+        dyingTimer = 0
+        heldDirs.removeAll()
+        activeTouchIds.removeAll()
+        pauseOverlay?.isHidden = true
         cfg = GameConfig.difficulties[difficulty]!
         self.difficulty = difficulty
         score = 0
@@ -337,8 +351,6 @@ extension GameScene {
         extraLifeAwarded = false
         phaseIndex = 0
         phaseTimer = 0
-        for p in particles { p.node?.removeFromParent() }
-        particles = []
 
         resetCollectibles()
         pacman = PacMan()
@@ -354,3 +366,103 @@ extension GameScene {
         showStartOverlay()
     }
 }
+
+#if DEBUG
+extension GameScene {
+    /// Exercise the real scene with deterministic frame advances on the simulator.
+    /// Launch a Debug build with --smoke-test; no test state is persisted.
+    func runGameplaySmokeTests() {
+        var checks = 0
+        func check(_ value: Bool, _ name: String) {
+            precondition(value, name)
+            checks += 1
+            print("PASS \(name)")
+        }
+        newGame(difficulty: .normal)
+        splashOverlay?.isHidden = true
+        pacman.x = 287
+        pacman.dir = Dir(x: 1, y: 0)
+        pressDir("test", Dir(x: -1, y: 0))
+        check(pacman.dir.x == -1 && pacman.x == 287, "Immediate reversal")
+        phaseTimer = 6990
+        triggerFrightened()
+        updatePhase(40)
+        check(phaseIndex == 0 && phaseTimer == 6990, "Frightened phase freeze")
+        frightenedTimer = 0
+        updatePhase(40)
+        check(phaseIndex == 1, "Phase resumes")
+        dying = true
+        levelComplete()
+        newGame(difficulty: .normal)
+        tick(dt: 2000)
+        check(!dying && level == 1 && lives == 3 && transitionAction == nil, "Clean restart")
+        running = true
+        levelComplete()
+        pauseGame()
+        tick(dt: 2000)
+        check(level == 1 && transitionRemaining == 1600, "Paused transition")
+        resumeGame()
+        tick(dt: 1600)
+        check(level == 2 && transitionAction == nil && !transitioning, "Resumed transition")
+        phaseIndex = 4
+        respawnPositions()
+        check(phaseIndex == 0 && phaseTimer == 0, "Respawn phase reset")
+        pacman.x = 0; pacman.y = 260
+        ghosts = [ghosts[0]]
+        ghosts[0].x = 559; ghosts[0].y = 260; ghosts[0].state = .chase
+        checkGhostCollisions()
+        check(dying, "Tunnel seam collision")
+        newGame(difficulty: .normal)
+        let ghost = ghosts[0]
+        ghost.state = .leaving; ghost.x = 260; ghost.y = 200
+        frightenedTimer = 1000
+        updateGhost(ghost, dt: 16)
+        check(ghost.state == .frightened, "Power pellet on house exit")
+        newGame(difficulty: .normal)
+        pacman.x = 230; pacman.y = 100; pacman.dir = Dir(x: 1, y: 0)
+        pressDir("up", Dir(x: 0, y: -1)); releaseDir("up")
+        stepEntity(pacman, speed: 0.13, dt: 100, pickDir: pickPacDir)
+        check(pacman.dir.y == -1 && pacman.queuedDir == .zero, "Buffered tap consumed")
+        newGame(difficulty: .normal)
+        running = true
+        startDeathSequence()
+        for _ in 0..<100 { tick(dt: 16) }
+        check(lives == 2 && !dying && !transitioning, "Death and respawn")
+        score = 9900
+        for ghost in ghosts { ghost.state = .frightened; eatGhost(ghost) }
+        checkExtraLife()
+        check(score == 12900 && lives == 3, "Combo and single extra life")
+        newGame(difficulty: .normal)
+        over = true
+        showGameOverOverlay(isNewBest: false, best: 0)
+        handleButtonTap("btn-close")
+        check(!over && !running && startOverlay?.isHidden == false, "Close game over returns to menu")
+        check(button(at: hud.pauseButton.position)?.id != "btn-pause", "Overlay blocks underlying HUD")
+        let initialSize = size
+        for viewport in [CGSize(width: 320, height: 568), CGSize(width: 390, height: 844), CGSize(width: 768, height: 1024), CGSize(width: 1024, height: 768)] {
+            size = viewport
+            layout(size: viewport)
+            let board = CGRect(origin: mazeContainer.position, size: CGSize(width: simWidth * mazeContainer.xScale, height: simHeight * mazeContainer.yScale))
+            check(board.minX >= 0 && board.maxX <= viewport.width && board.minY >= 0 && board.maxY <= viewport.height, "Maze fits \(viewport)")
+        }
+        size = initialSize
+        layout(size: initialSize)
+        newGame(difficulty: .normal)
+        var staysOnPaths = true
+        for _ in 0..<10000 {
+            for ghost in ghosts {
+                updateGhost(ghost, dt: 16)
+                if GameConfig.rawTile(ghost.col, ghost.row) == 1 { staysOnPaths = false }
+            }
+        }
+        check(staysOnPaths, "Long ghost simulation")
+        FileHandle.standardError.write(Data("PACMAN SMOKE: \(checks) checks passed\n".utf8))
+        newGame(difficulty: .normal)
+        hideStartOverlayNode()
+        splashOverlay?.isHidden = true
+        running = true
+        gamePaused = true
+        pacman.mouthPhase = 1
+    }
+}
+#endif

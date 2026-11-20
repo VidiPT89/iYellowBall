@@ -14,6 +14,7 @@ final class GhostNode: SKNode {
     private let eyeWhiteR: SKShapeNode
     private let pupilL: SKShapeNode
     private let pupilR: SKShapeNode
+    private let scaredMouth = SKShapeNode()
     private let scaredEyeL: SKShapeNode
     private let scaredEyeR: SKShapeNode
 
@@ -24,7 +25,7 @@ final class GhostNode: SKNode {
         body.fillColor = baseColor
         body.strokeColor = baseColor
         body.lineWidth = 0.5
-        body.glowWidth = 4
+        body.glowWidth = 0.5
 
         let eyeR = size * 0.15
         let offsetX = size * 0.19
@@ -66,6 +67,14 @@ final class GhostNode: SKNode {
         addChild(pupilR)
         addChild(scaredEyeL)
         addChild(scaredEyeR)
+        let mouth = CGMutablePath()
+        for i in 0..<7 {
+            let point = CGPoint(x: -size * 0.3 + CGFloat(i) * size * 0.1, y: -size * (i % 2 == 0 ? 0.22 : 0.3))
+            if i == 0 { mouth.move(to: point) } else { mouth.addLine(to: point) }
+        }
+        scaredMouth.path = mouth
+        scaredMouth.lineWidth = 1.4
+        addChild(scaredMouth)
     }
 
     required init?(coder: NSCoder) { fatalError("not supported") }
@@ -89,6 +98,11 @@ final class GhostNode: SKNode {
     }
 
     func updateAppearance(state: GhostState, dir: CGVector, frightenedTimer: Double) {
+        scaredMouth.isHidden = state != .frightened
+        let faceColor = frightenedTimer < 2000 && Int(CACurrentMediaTime() / 0.15) % 2 == 0 ? SKColor(hex: "#d92e38") : SKColor(hex: "#eef2ff")
+        scaredMouth.strokeColor = faceColor
+        scaredEyeL.strokeColor = faceColor
+        scaredEyeR.strokeColor = faceColor
         switch state {
         case .eaten:
             body.isHidden = true

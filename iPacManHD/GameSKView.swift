@@ -4,6 +4,26 @@ import UIKit
 /// Forwards hardware-keyboard presses (arrow keys, WASD, space, P) to the
 /// current GameScene — handy for the Simulator and any iPad with a keyboard.
 final class GameSKView: SKView {
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        NotificationCenter.default.addObserver(self, selector: #selector(suspendGame), name: UIApplication.willResignActiveNotification, object: nil)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    @objc private func suspendGame() { (scene as? GameScene)?.pauseGame() }
+
+    deinit { NotificationCenter.default.removeObserver(self) }
+
+    override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        pressesEnded(presses, with: event)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if let scene = scene as? GameScene, scene.size != bounds.size { scene.size = bounds.size }
+    }
+
     override var canBecomeFirstResponder: Bool { true }
 
     /// `didMove(to:)` on the scene fires before this view is actually

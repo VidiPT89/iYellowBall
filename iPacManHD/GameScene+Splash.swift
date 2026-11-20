@@ -19,7 +19,7 @@ extension GameScene {
         // overlay, so its tap targets must win the linear hit-test while
         // it's shown. The link (inserted later, further down) ends up even
         // further front so it takes priority over this full-screen catch-all.
-        buttons.insert(UIButton(node: bg, id: "splash-tap"), at: 0)
+        buttons.insert(GameButton(node: bg, id: "splash-tap"), at: 0)
 
         let title = SKLabelNode(fontNamed: "Menlo-Bold")
         title.text = "PAC-MAN HD"
@@ -65,7 +65,7 @@ extension GameScene {
         link.alpha = 0
         splash.addChild(link)
         splashLink = link
-        buttons.insert(UIButton(node: link, id: "open-website"), at: 0)
+        buttons.insert(GameButton(node: link, id: "open-website"), at: 0)
 
         let skip = SKLabelNode(fontNamed: "Menlo")
         skip.fontSize = 12

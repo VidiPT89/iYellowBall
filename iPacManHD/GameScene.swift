@@ -1,19 +1,5 @@
 import SpriteKit
 
-/// A small particle used for the death explosion, ported from the JS
-/// `particles` array (plain data, drawn each frame as a filled square).
-struct Particle {
-    var x: Double
-    var y: Double
-    var vx: Double
-    var vy: Double
-    var life: Double = 0
-    var maxLife: Double
-    var color: SKColor
-    var size: CGFloat
-    weak var node: SKShapeNode?
-}
-
 final class GameScene: SKScene {
 
     // MARK: Simulation state (mirrors `state` in script.js)
@@ -28,6 +14,8 @@ final class GameScene: SKScene {
     var gamePaused = false
     var over = false
     var transitioning = false
+    var transitionRemaining: Double = 0
+    var transitionAction: (() -> Void)?
     var dying = false
     var dyingTimer: Double = 0
     var invulnerableTimer: Double = 0
@@ -40,7 +28,6 @@ final class GameScene: SKScene {
 
     var pacman = PacMan()
     var ghosts: [Ghost] = []
-    var particles: [Particle] = []
 
     var collect: [Int] = []
     var remaining = 0
@@ -49,7 +36,6 @@ final class GameScene: SKScene {
 
     let simWidth = CGFloat(GameConfig.cols) * CGFloat(GameConfig.cell)
     let simHeight = CGFloat(GameConfig.rows) * CGFloat(GameConfig.cell)
-    var renderScale: CGFloat = 1
 
     /// The hosting view fills the whole screen (`.ignoresSafeArea()`), so the
     /// scene has to inset itself manually to stay clear of the notch/Dynamic
@@ -61,15 +47,11 @@ final class GameScene: SKScene {
     let mazeContainer = SKNode()
     var dotNodes: [Int: SKShapeNode] = [:]
     var powerNodes: [Int: SKShapeNode] = [:]
-    let particlesContainer = SKNode()
 
     let pacmanNode = SKShapeNode()
     var ghostNodes: [String: GhostNode] = [:]
 
     var lastUpdateTime: TimeInterval = 0
-
-    struct Mote { let node: SKShapeNode; let speed: CGFloat; var phase: CGFloat }
-    var motes: [Mote] = []
 
     // MARK: UI (see GameScene+UI.swift)
     var hud = HUDNodes()
@@ -78,7 +60,7 @@ final class GameScene: SKScene {
     var gameOverOverlay: SKNode?
     var toastNode: SKLabelNode?
 
-    var buttons: [UIButton] = []
+    var buttons: [GameButton] = []
     var diffButtons: [Difficulty: (bg: SKShapeNode, name: SKLabelNode, meta: SKLabelNode)] = [:]
     var startTitleLabel: SKLabelNode?
     var startHintLabel: SKLabelNode?
@@ -118,9 +100,7 @@ final class GameScene: SKScene {
         backgroundColor = SKColor(hex: "#010102")
         anchorPoint = .zero
 
-        buildAmbientBackground()
         addChild(mazeContainer)
-        mazeContainer.addChild(particlesContainer)
         buildMaze()
         buildEntityNodes()
         buildHUD()
@@ -130,7 +110,15 @@ final class GameScene: SKScene {
         layout(size: size)
 
         newGame(difficulty: .normal)
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--smoke-test") {
+            runGameplaySmokeTests()
+        } else {
+            playSplash()
+        }
+        #else
         playSplash()
+        #endif
 
         view.isMultipleTouchEnabled = true
     }
@@ -149,12 +137,11 @@ final class GameScene: SKScene {
         let availableW = size.width - sideMargin * 2
         let availableH = size.height - hudHeight - controlsHeight
         let s = max(1, min(availableW, availableH)) / simWidth
-        renderScale = s
         mazeContainer.xScale = s
         mazeContainer.yScale = s
         let mazeScreenSize = simWidth * s
         let originX = (size.width - mazeScreenSize) / 2
-        let bottomY = controlsHeight
+        let bottomY = controlsHeight + max(0, (availableH - mazeScreenSize) / 2)
         mazeContainer.position = CGPoint(x: originX, y: bottomY)
 
         layoutHUD(size: size)
@@ -186,24 +173,31 @@ final class GameScene: SKScene {
         // devices — the exact stutter already fixed for the web build in
         // "Fix severe frame-rate stutter by caching the static maze layers".
         let wallLayer = SKNode()
+        let wallPath = CGMutablePath()
         for r in 0..<GameConfig.rows {
             for c in 0..<GameConfig.cols {
                 let v = GameConfig.maze[GameConfig.idx(c, r)]
                 let x = Double(c) * GameConfig.cell
                 let y = Double(r) * GameConfig.cell
                 if v == 1 {
-                    let node = SKShapeNode(rectOf: CGSize(width: GameConfig.cell - 2.4, height: GameConfig.cell - 2.4), cornerRadius: 4)
-                    node.fillColor = SKColor(hex: "#152048")
-                    node.strokeColor = SKColor(hex: "#4d78ff")
-                    node.lineWidth = 1.3
-                    node.glowWidth = 2.2
-                    node.position = localPoint(x + GameConfig.cell / 2, y + GameConfig.cell / 2)
-                    wallLayer.addChild(node)
+                    let path = wallPath
+                    func wall(_ col: Int, _ row: Int) -> Bool {
+                        col >= 0 && col < GameConfig.cols && row >= 0 && row < GameConfig.rows && GameConfig.maze[GameConfig.idx(col, row)] == 1
+                    }
+                    func edge(_ ax: Double, _ ay: Double, _ bx: Double, _ by: Double) {
+                        path.move(to: localPoint(ax, ay))
+                        path.addLine(to: localPoint(bx, by))
+                    }
+                    let cell = GameConfig.cell
+                    if !wall(c, r - 1) { edge(x, y, x + cell, y) }
+                    if !wall(c, r + 1) { edge(x, y + cell, x + cell, y + cell) }
+                    if !wall(c - 1, r) { edge(x, y, x, y + cell) }
+                    if !wall(c + 1, r) { edge(x + cell, y, x + cell, y + cell) }
                 } else if v == 0 {
                     let node = SKShapeNode(circleOfRadius: 2.1)
                     node.fillColor = SKColor(hex: "#ffe28a")
                     node.strokeColor = SKColor(hex: "#ffe28a")
-                    node.glowWidth = 1.5
+                    node.glowWidth = 0
                     node.position = localPoint(x + GameConfig.cell / 2, y + GameConfig.cell / 2)
                     mazeContainer.addChild(node)
                     dotNodes[GameConfig.idx(c, r)] = node
@@ -223,6 +217,17 @@ final class GameScene: SKScene {
             }
         }
 
+        for (width, color) in [(5.0, "#1637b7"), (1.5, "#557dff")] {
+            let node = SKShapeNode(path: wallPath)
+            node.strokeColor = SKColor(hex: color)
+            node.lineWidth = width
+            wallLayer.addChild(node)
+        }
+        let door = SKShapeNode(rectOf: CGSize(width: 40, height: 3))
+        door.fillColor = SKColor(hex: "#ffb8de")
+        door.strokeColor = .clear
+        door.position = localPoint(280, 224.5)
+        wallLayer.addChild(door)
         mazeContainer.addChild(wallLayer)
         let frame = wallLayer.calculateAccumulatedFrame()
         if let view, frame.width > 0, frame.height > 0, let texture = view.texture(from: wallLayer) {
@@ -239,7 +244,7 @@ final class GameScene: SKScene {
         pacmanNode.fillColor = SKColor(hex: "#ffd400")
         pacmanNode.strokeColor = SKColor(hex: "#ffd400")
         pacmanNode.lineWidth = 0.5
-        pacmanNode.glowWidth = 6
+        pacmanNode.glowWidth = 0.5
         pacmanNode.zPosition = 10
         mazeContainer.addChild(pacmanNode)
 
@@ -266,53 +271,36 @@ final class GameScene: SKScene {
         dt = min(40, dt)
         lastUpdateTime = currentTime
 
-        updateAmbientBackground(dt: dt)
         tick(dt: dt)
         render()
     }
 
-    // MARK: Ambient background (subtle drifting/twinkling dots, always animating)
-
-    func buildAmbientBackground() {
-        let count = 46
-        for _ in 0..<count {
-            let dot = SKShapeNode(circleOfRadius: CGFloat.random(in: 0.6...1.8))
-            dot.fillColor = SKColor(white: 0.96, alpha: 0.5)
-            dot.strokeColor = .clear
-            dot.zPosition = -10
-            dot.position = CGPoint(x: CGFloat.random(in: 0...size.width), y: CGFloat.random(in: 0...size.height))
-            addChild(dot)
-            motes.append(Mote(node: dot, speed: CGFloat.random(in: 4...16), phase: CGFloat.random(in: 0...(2 * .pi))))
-        }
-    }
-
-    func updateAmbientBackground(dt: Double) {
-        guard size.height > 0 else { return }
-        for i in motes.indices {
-            var mote = motes[i]
-            mote.node.position.y -= mote.speed * CGFloat(dt / 1000)
-            if mote.node.position.y < -5 {
-                mote.node.position.y = size.height + 5
-                mote.node.position.x = CGFloat.random(in: 0...size.width)
-            }
-            mote.phase += CGFloat(dt) * 0.002
-            mote.node.alpha = 0.15 + (sin(mote.phase) * 0.5 + 0.5) * 0.35
-            motes[i] = mote
-        }
+    func scheduleTransition(_ ms: Double, action: @escaping () -> Void) {
+        transitionRemaining = ms
+        transitionAction = action
     }
 
     func tick(dt: Double) {
         if gamePaused || over { return }
 
+        if let action = transitionAction {
+            transitionRemaining -= dt
+            if transitionRemaining <= 0 {
+                transitionAction = nil
+                action()
+            }
+            return
+        }
+
         if dying {
             dyingTimer += dt
-            updateParticles(dt)
+
             if dyingTimer >= GameConfig.deathAnimMs { finishDeathSequence() }
             return
         }
 
         if !running || transitioning {
-            updateParticles(dt)
+
             return
         }
 
@@ -321,13 +309,18 @@ final class GameScene: SKScene {
         }, onEnter: { [weak self] c, r in
             self?.handleDotConsumption(c, r)
         })
+        if transitioning { return }
+        if pacman.turnBufferMs > 0 {
+            pacman.turnBufferMs = max(0, pacman.turnBufferMs - dt)
+            if pacman.turnBufferMs == 0 { pacman.queuedDir = .zero }
+        }
         pacman.mouthPhase += (pacman.dir.x != 0 || pacman.dir.y != 0) ? dt * 0.012 : 0
 
         for g in ghosts { updateGhost(g, dt: dt) }
 
         updatePhase(dt)
         updateFrightened(dt)
-        updateParticles(dt)
+
         if invulnerableTimer > 0 { invulnerableTimer -= dt }
 
         checkGhostCollisions()
@@ -343,7 +336,6 @@ final class GameScene: SKScene {
             for g in ghosts { renderGhost(g) }
             renderPacman()
         }
-        renderParticles()
     }
 
     func renderPacman() {
@@ -405,52 +397,4 @@ final class GameScene: SKScene {
         ]))
     }
 
-    // MARK: Particles
-
-    func spawnExplosion(x: Double, y: Double, color: SKColor, count: Int = 22) {
-        for _ in 0..<count {
-            let angle = Double.random(in: 0...(2 * .pi))
-            let speed = 40.0 + Double.random(in: 0...160)
-            let size = CGFloat(2 + Double.random(in: 0...2.5))
-            let node = SKShapeNode(rectOf: CGSize(width: size, height: size))
-            node.fillColor = color
-            node.strokeColor = .clear
-            node.position = localPoint(x, y)
-            particlesContainer.addChild(node)
-            let p = Particle(x: x, y: y, vx: cos(angle) * speed, vy: sin(angle) * speed,
-                              maxLife: 350 + Double.random(in: 0...250), color: color, size: size, node: node)
-            particles.append(p)
-        }
-    }
-
-    func updateParticles(_ dt: Double) {
-        for i in particles.indices.reversed() {
-            particles[i].life += dt
-            particles[i].x += particles[i].vx * (dt / 1000)
-            // vy is in JS "down positive" convention; gravity adds to it.
-            particles[i].y += particles[i].vy * (dt / 1000)
-            particles[i].vy += 60 * (dt / 1000)
-            if particles[i].life >= particles[i].maxLife {
-                particles[i].node?.removeFromParent()
-                particles.remove(at: i)
-            }
-        }
-    }
-
-    func shakeCamera() {
-        let basePos = mazeContainer.position
-        let shake = SKAction.sequence([
-            .moveBy(x: 6, y: 0, duration: 0.04), .moveBy(x: -12, y: 0, duration: 0.08),
-            .moveBy(x: 12, y: 0, duration: 0.08), .moveBy(x: -6, y: 0, duration: 0.04),
-        ])
-        mazeContainer.run(shake) { [weak self] in self?.mazeContainer.position = basePos }
-    }
-
-    func renderParticles() {
-        for p in particles {
-            guard let node = p.node else { continue }
-            node.position = localPoint(p.x, p.y)
-            node.alpha = max(0, 1 - p.life / p.maxLife)
-        }
-    }
 }

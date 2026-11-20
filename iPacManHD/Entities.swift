@@ -16,6 +16,7 @@ final class PacMan: GridEntity {
     var dir: Dir = .zero
     var queuedDir: Dir = .zero
     var lastDir: Dir = Dir(x: -1, y: 0)
+    var turnBufferMs: Double = 0
     var mouthPhase: Double = 0
 
     init() {
@@ -32,6 +33,7 @@ final class PacMan: GridEntity {
         y = Double(row) * GameConfig.cell
         dir = .zero
         queuedDir = .zero
+        turnBufferMs = 0
     }
 }
 
@@ -41,7 +43,6 @@ enum GhostState {
 
 final class Ghost: GridEntity {
     let name: String
-    let colorHex: String
     let home: GridPoint
     let scatter: GridPoint
 
@@ -57,7 +58,6 @@ final class Ghost: GridEntity {
 
     init(def: GameConfig.GhostDef, releaseDelay: Double) {
         name = def.name
-        colorHex = def.colorHex
         home = def.home
         scatter = def.scatter
         col = def.home.col

@@ -76,11 +76,15 @@ final class SoundEngine {
         try? engine.start()
     }
 
-    func setSoundOn(_ on: Bool) { isOn = on }
-    func toggleSound() -> Bool { isOn.toggle(); return isOn }
+    func toggleSound() -> Bool {
+        isOn.toggle()
+        if !isOn { lock.lock(); voices.removeAll(); lock.unlock() }
+        return isOn
+    }
 
     func playTone(freq: Double, duration: Double, shape: ToneShape = .square, gain: Double = 0.18, delay: Double = 0) {
         guard isOn else { return }
+        if !engine.isRunning { try? engine.start() }
         lock.lock()
         let start = sampleClock + Int64(delay * sampleRate)
         voices.append(Voice(freq: freq, shape: shape, gain: gain, startSample: start, durationSamples: Int64(duration * sampleRate)))

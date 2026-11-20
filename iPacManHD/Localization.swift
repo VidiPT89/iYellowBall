@@ -20,11 +20,11 @@ enum L {
     static let strings: [Lang: [String: String]] = [
         .pt: [
             "title": "Pac-Man HD",
-            "tagline": "Guia o Pac-Man pelo labirinto, engole todos os pontos e foge dos fantasmas.",
+
             "diffEasy": "Fácil", "diffEasyMeta": "4 vidas",
             "diffNormal": "Normal", "diffNormalMeta": "3 vidas",
             "diffHard": "Difícil", "diffHardMeta": "2 vidas",
-            "scoreLabel": "Pontos", "levelLabel": "Nível", "livesLabel": "Vidas", "bestLabel": "Melhor",
+            "scoreLabel": "Pontos", "levelLabel": "Nível", "bestLabel": "Melhor",
             "pressStart": "TOCA PARA COMEÇAR",
             "pausedTitle": "PAUSA", "pausedSub": "Toca para retomar",
             "resumeBtn": "Retomar", "menuBtn": "Menu inicial",
@@ -37,11 +37,11 @@ enum L {
         ],
         .en: [
             "title": "Pac-Man HD",
-            "tagline": "Guide Pac-Man through the maze, gobble every dot and outrun the ghosts.",
+
             "diffEasy": "Easy", "diffEasyMeta": "4 lives",
             "diffNormal": "Normal", "diffNormalMeta": "3 lives",
             "diffHard": "Hard", "diffHardMeta": "2 lives",
-            "scoreLabel": "Score", "levelLabel": "Level", "livesLabel": "Lives", "bestLabel": "Best",
+            "scoreLabel": "Score", "levelLabel": "Level", "bestLabel": "Best",
             "pressStart": "TAP TO START",
             "pausedTitle": "PAUSED", "pausedSub": "Tap to resume",
             "resumeBtn": "Resume", "menuBtn": "Main Menu",
@@ -60,8 +60,5 @@ enum L {
 
     static func levelClear(_ n: Int) -> String { current == .pt ? "NÍVEL \(n) CONCLUÍDO" : "LEVEL \(n) CLEARED" }
     static func levelIncoming(_ n: Int) -> String { current == .pt ? "NÍVEL \(n)" : "LEVEL \(n)" }
-    static func textCaught(_ lvl: Int) -> String {
-        current == .pt ? "Foste apanhado pelos fantasmas no nível \(lvl)." : "You were caught by the ghosts on level \(lvl)."
-    }
     static func ghostEatToast(_ n: Int) -> String { "+\(n)" }
 }
